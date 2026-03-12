@@ -1,80 +1,300 @@
 ---
 title: "Webhooks"
-api: "POST /webhooks"
-description: "Receba notificações automáticas em tempo real sobre eventos na sua conta."
+api: "POST (enviado automaticamente pela plataforma)"
+description: "Webhooks notificam seu sistema automaticamente quando eventos importantes acontecem."
 ---
 
-Webhooks são a forma mais eficiente de manter seu sistema sincronizado com a Zynx Wallet. Em vez de ficar consultando a API repetidamente, nós avisamos você assim que algo acontece.
+Webhooks permitem que seu sistema receba notificações **em tempo real** sempre que um evento ocorrer.
 
-## Como Funciona
+Em vez de ficar consultando a API repetidamente para verificar mudanças, seu servidor recebe automaticamente um **HTTP POST** quando algo acontece.
 
-1. Você configura uma URL de destino no seu painel ou via API.
-2. Quando um evento ocorre (ex: pagamento confirmado), a Zynx faz um `POST` para sua URL.
-3. Seu servidor deve responder com um status HTTP `200 OK` para confirmar o recebimento.
+Eventos comuns incluem:
 
-<Warning>
-  **Importante:** Se o seu servidor não responder com `200 OK`, a Zynx tentará reenviar a notificação em intervalos crescentes por até 24 horas.
-</Warning>
+- pagamento aprovado
+- pagamento criado
+- pagamento cancelado
+- atualizações de status
 
-## Estrutura do Payload
+---
 
-O corpo da requisição enviada pela Zynx segue este formato:
+# Como funciona
 
-<ResponseField name="event" type="string">
-  O tipo do evento ocorrido.
-</ResponseField>
+O fluxo de webhooks segue estas etapas:
 
-<ResponseField name="data" type="object">
-  <Expandable title="Detalhes do Evento">
-    <ResponseField name="id" type="string">
-      ID da transação relacionada (ex: `pay_abc123`).
-    </ResponseField>
-    <ResponseField name="status" type="string">
-      Novo status da transação (`COMPLETED`, `FAILED`, `CANCELLED`).
-    </ResponseField>
-    <ResponseField name="value" type="number">
-      Valor da transação em **centavos**.
-    </ResponseField>
-    <ResponseField name="netValue" type="number">
-      Valor líquido (após taxas) em **centavos**.
-    </ResponseField>
-  </Expandable>
-</ResponseField>
+1. um evento acontece na plataforma  
+2. o sistema gera um payload com os dados do evento  
+3. uma assinatura HMAC é criada para segurança  
+4. um **HTTP POST** é enviado para sua URL configurada  
+5. seu servidor recebe os dados e processa o evento  
 
-### Exemplo de Notificação de Pagamento
+---
+
+# Configuração
+
+Para receber webhooks você precisa configurar uma **URL pública** no seu sistema.
+
+Exemplo:
+
+```
+https://seusite.com/webhook
+```
+
+Sempre que um evento ocorrer, a plataforma enviará uma requisição para essa URL.
+
+---
+
+# Método da Requisição
+
+Todos os webhooks são enviados usando:
+
+```
+POST
+```
+
+---
+
+# Headers enviados
+
+Cada webhook inclui headers de segurança.
+
+| Header | Descrição |
+|------|-----------|
+Content-Type | sempre `application/json` |
+User-Agent | identificador da API |
+X-Webhook-Timestamp | timestamp do envio |
+X-Webhook-Signature | assinatura HMAC do payload |
+
+Exemplo:
+
+```
+Content-Type: application/json
+User-Agent: Vision-Wallet-API/1.0
+X-Webhook-Timestamp: 1710000000
+X-Webhook-Signature: sha256=9c0b9eab1f9a0d1...
+```
+
+---
+
+# Estrutura do Payload
+
+O corpo da requisição contém os dados do evento.
 
 ```json
 {
+  "type": "payment",
   "event": "payment.completed",
-  "timestamp": "2024-02-16T15:30:00Z",
   "data": {
     "id": "pay_abc123",
-    "status": "COMPLETED",
-    "value": 15300,
-    "netValue": 15000,
-    "updatedAt": "2024-02-16T15:05:00Z"
-  }
+    "value": 15000,
+    "status": "COMPLETED"
+  },
+  "timestamp": 1710000000000
 }
 ```
 
-## Eventos Suportados
+---
 
-| Evento | Quando ocorre? |
-| :--- | :--- |
-| `payment.completed` | Quando o cliente finaliza o pagamento PIX com sucesso. |
-| `payment.failed` | Quando o pagamento não pôde ser processado ou expirou. |
-| `withdrawal.created` | Quando um novo saque é solicitado via API ou Painel. |
-| `withdrawal.completed` | Quando o saque foi enviado com sucesso para o destino. |
-| `withdrawal.failed` | Quando o saque foi rejeitado (ex: chave PIX inválida). |
+# Campos do Payload
 
-## Segurança (Recomendado)
+<ResponseField name="type" type="string">
+Tipo do evento.
 
-Para garantir que a notificação veio realmente da Zynx Wallet, você deve validar o cabeçalho `X-Zynx-Signature` enviado em cada POST.
+Exemplo:
 
-1. Obtenha seu `Webhook Secret` no painel.
-2. Gere um HMAC SHA256 do corpo bruto (raw body) da requisição usando seu Secret.
-3. Compare o resultado com o valor do cabeçalho `X-Zynx-Signature`.
+```
+payment
+```
+</ResponseField>
 
-<Tip>
-  Sempre processe webhooks de forma assíncrona. Receba o dado, responda `200 OK` imediatamente e depois processe a lógica de negócio em background.
-</Tip>
+<ResponseField name="event" type="string">
+Nome completo do evento.
+
+Exemplo:
+
+```
+payment.completed
+payment.created
+payment.updated
+```
+</ResponseField>
+
+<ResponseField name="data" type="object">
+Dados específicos do evento.
+</ResponseField>
+
+<ResponseField name="timestamp" type="number">
+Timestamp do momento em que o webhook foi gerado.
+</ResponseField>
+
+---
+
+# Eventos disponíveis
+
+| Evento | Descrição |
+|------|-----------|
+payment.created | pagamento criado |
+payment.completed | pagamento confirmado |
+payment.updated | atualização de status |
+
+---
+
+# Segurança
+
+Todos os webhooks incluem uma **assinatura criptográfica** para garantir autenticidade.
+
+A assinatura é gerada utilizando:
+
+```
+HMAC SHA256
+```
+
+Usando sua **API Key** como chave secreta.
+
+---
+
+# Exemplo de geração de assinatura
+
+A assinatura é criada a partir do payload JSON.
+
+Processo:
+
+```
+1 converter payload para JSON string
+2 gerar HMAC SHA256 usando API Key
+3 retornar assinatura em formato hex
+```
+
+Exemplo de resultado:
+
+```
+sha256=8c3fa21d7c1baf0a8f0c...
+```
+
+---
+
+# Validação da assinatura
+
+Seu servidor deve verificar se o webhook realmente veio da plataforma.
+
+Processo:
+
+1. receber payload
+2. gerar assinatura local usando sua API Key
+3. comparar com o header `X-Webhook-Signature`
+
+Se forem iguais, o webhook é válido.
+
+---
+
+# Exemplo de requisição recebida
+
+<RequestExample>
+
+```http
+POST /webhook HTTP/1.1
+Host: seusite.com
+Content-Type: application/json
+User-Agent: Zynx-Wallet-API/1.0
+X-Webhook-Timestamp: 1710000000
+X-Webhook-Signature: sha256=3c4b0a9c...
+
+{
+  "type": "payment",
+  "event": "payment.completed",
+  "data": {
+    "id": "pay_abc123",
+    "value": 15000,
+    "status": "COMPLETED"
+  },
+  "timestamp": 1710000000000
+}
+```
+
+</RequestExample>
+
+---
+
+# Resposta esperada
+
+Seu servidor deve responder com **status HTTP 2xx** para confirmar que recebeu o webhook.
+
+Exemplo:
+
+```http
+HTTP/1.1 200 OK
+```
+
+Se seu servidor retornar erro, o webhook poderá ser reenviado.
+
+---
+
+# Sistema de retentativas
+
+Se o webhook falhar, a plataforma tentará enviar novamente.
+
+Estratégia:
+
+- máximo de **5 tentativas**
+- **backoff exponencial**
+
+Exemplo de delays:
+
+| Tentativa | Delay |
+|------|------|
+1 | 2 segundos |
+2 | 4 segundos |
+3 | 8 segundos |
+4 | 16 segundos |
+5 | 32 segundos |
+
+Se todas falharem, o webhook será marcado como **failed**.
+
+---
+
+# Timeout
+
+Cada webhook possui limite de resposta:
+
+```
+10 segundos
+```
+
+Se o servidor não responder dentro desse tempo, será considerado falha.
+
+---
+
+# Boas práticas
+
+- sempre responder rapidamente ao webhook  
+- validar a assinatura HMAC  
+- processar eventos de forma idempotente  
+- armazenar IDs de eventos para evitar duplicações  
+- retornar status `200` após processar com sucesso  
+
+---
+
+# Fluxo recomendado
+
+Fluxo ideal de processamento:
+
+```
+1 receber webhook
+2 validar assinatura
+3 verificar evento
+4 processar dados
+5 responder HTTP 200
+```
+
+---
+
+# Exemplo de resposta do servidor
+
+```json
+{
+  "received": true
+}
+```
+
+---
+
+Webhooks permitem integrar seu sistema com a plataforma de forma **automática, segura e em tempo real**.
