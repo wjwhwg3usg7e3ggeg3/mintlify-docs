@@ -1,34 +1,238 @@
 ---
 title: "Listar Saques"
-api: "GET /api/withdrawals"
-description: "Retorna uma lista de todos os saques realizados."
+api: "GET /api/v1/withdraw"
+description: "Lista todos os saques pertencentes ao usuário autenticado."
 ---
 
-### Query Parameters
+Este endpoint retorna **todos os saques do usuário autenticado**.
 
-<ParamField query="limit" type="number" default="20">
-  Quantidade de registros por página
+Os resultados são retornados em **ordem decrescente**, do mais recente para o mais antigo.
+
+Também inclui **paginação** e **estatísticas gerais** dos saques.
+
+---
+
+# Autenticação
+
+Envie sua API Key no header.
+
+```bash
+X-API-Key: zynx_sua_chave_aqui
+```
+
+---
+
+# Rate Limit
+
+| Tipo | Limite |
+|-----|------|
+API Key | 100 requisições por minuto |
+
+---
+
+# Parâmetros de consulta
+
+<ParamField query="status" type="string">
+Filtra os saques por status.
+
+Valores possíveis:
+
+```
+PENDING
+PROCESSING
+WAITING
+COMPLETED
+FAILED
+```
 </ParamField>
 
-<RequestExample>
-```bash cURL
-curl -X GET "https://api.zynxwallet.com.br/api/withdrawals?limit=10" \
-  -H "X-API-Key: zynx_sua_api_key"
+<ParamField query="limit" type="number">
+Quantidade de resultados retornados.
+
+Valor padrão:
+
 ```
+50
+```
+</ParamField>
+
+<ParamField query="offset" type="number">
+Deslocamento da paginação.
+
+Usado para navegar entre páginas de resultados.
+</ParamField>
+
+---
+
+# Exemplo de requisição
+
+<RequestExample>
+
+```bash
+curl -X GET "https://api.zynxwallet.com.br/api/v1/withdraw?limit=20&offset=0" \
+-H "X-API-Key: zynx_sua_chave_aqui"
+```
+
 </RequestExample>
 
+---
+
+# Estrutura da resposta
+
+<ResponseField name="success" type="boolean">
+Indica se a requisição foi processada com sucesso.
+</ResponseField>
+
+<ResponseField name="data.withdraws" type="array">
+Lista de saques retornados.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].id" type="string">
+ID único do saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].correlationID" type="string">
+ID de correlação do saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].value" type="number">
+Valor solicitado para saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].status" type="string">
+Status atual do saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].pixKey" type="string">
+Chave utilizada no saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].description" type="string">
+Descrição do saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].metadata" type="object">
+Informações adicionais do saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].createdAt" type="string">
+Data de criação do saque.
+</ResponseField>
+
+<ResponseField name="data.withdraws[].updatedAt" type="string">
+Última atualização do saque.
+</ResponseField>
+
+---
+
+# Paginação
+
+<ResponseField name="data.pagination.total" type="number">
+Quantidade total de saques.
+</ResponseField>
+
+<ResponseField name="data.pagination.limit" type="number">
+Quantidade de registros retornados.
+</ResponseField>
+
+<ResponseField name="data.pagination.offset" type="number">
+Posição atual da paginação.
+</ResponseField>
+
+<ResponseField name="data.pagination.hasMore" type="boolean">
+Indica se existem mais registros disponíveis.
+</ResponseField>
+
+---
+
+# Estatísticas
+
+<ResponseField name="data.statistics.total" type="number">
+Total de saques registrados.
+</ResponseField>
+
+<ResponseField name="data.statistics.completed" type="number">
+Quantidade de saques concluídos.
+</ResponseField>
+
+<ResponseField name="data.statistics.pending" type="number">
+Quantidade de saques em processamento.
+</ResponseField>
+
+<ResponseField name="data.statistics.failed" type="number">
+Quantidade de saques que falharam.
+</ResponseField>
+
+<ResponseField name="data.statistics.totalValue" type="number">
+Valor total solicitado em saques.
+</ResponseField>
+
+---
+
+# Exemplo de resposta
+
 <ResponseExample>
-```json Resposta
+
+```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "wth_xyz789",
-      "amount": 50.00,
-      "status": "COMPLETED",
-      "createdAt": "2024-01-15T15:00:00.000Z"
+  "data": {
+    "withdraws": [
+      {
+        "id": "wd_1",
+        "correlationID": "corr_9123",
+        "value": 100,
+        "status": "PROCESSING",
+        "pixKey": "email@exemplo.com",
+        "description": "Saque",
+        "metadata": {},
+        "createdAt": "2026-03-12T18:10:00Z",
+        "updatedAt": "2026-03-12T18:10:02Z"
+      },
+      {
+        "id": "wd_2",
+        "correlationID": "corr_8123",
+        "value": 50,
+        "status": "COMPLETED",
+        "pixKey": "11999999999",
+        "description": "Saque",
+        "metadata": {},
+        "createdAt": "2026-03-11T17:00:00Z",
+        "updatedAt": "2026-03-11T17:00:05Z"
+      }
+    ],
+    "pagination": {
+      "total": 2,
+      "limit": 50,
+      "offset": 0,
+      "hasMore": false
+    },
+    "statistics": {
+      "total": 2,
+      "completed": 1,
+      "pending": 1,
+      "failed": 0,
+      "totalValue": 150
     }
-  ]
+  }
 }
 ```
+
 </ResponseExample>
+
+---
+
+# Erros possíveis
+
+## Erro interno
+
+```json
+{
+  "error": "Erro interno do servidor",
+  "message": "Erro inesperado ao listar saques"
+}
+```
+
+---
+
+Este endpoint é utilizado para **visualizar o histórico completo de saques da conta**, incluindo paginação e estatísticas.
