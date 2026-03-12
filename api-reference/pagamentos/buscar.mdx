@@ -1,59 +1,271 @@
 ---
-title: "Consultar Status de Pagamento"
-api: "GET /payment/get/{id}"
-description: "Verifica os detalhes e o status atual de um pagamento específico."
+title: "Consultar Pagamento"
+api: "GET /api/v1/payment/get/:id"
+description: "Busca um pagamento específico pelo ID e retorna seus dados atuais."
 ---
 
-### Path Parameters
+Este endpoint permite consultar os detalhes de um pagamento já criado dentro da plataforma.
+
+Ele retorna informações importantes da transação como:
+
+- status atual
+- valor da cobrança
+- valor líquido
+- QR Code PIX
+- descrição
+- data de criação
+
+Esse endpoint **não altera o estado do pagamento**.  
+Ele apenas retorna os dados registrados no sistema.
+
+---
+
+# Autenticação
+
+Este endpoint exige autenticação obrigatória.
+
+Envie sua chave de API no header da requisição:
+
+```bash
+X-API-Key: zynx_sua_chave_aqui
+```
+
+Caso nenhuma chave válida seja enviada, a API retornará:
+
+```json
+{
+  "error": "Unauthorized"
+}
+```
+
+---
+
+# Rate Limit
+
+Para evitar abuso da API, existe um limite de requisições.
+
+| Tipo | Limite |
+|-----|------|
+API Key | 100 requisições por minuto |
+
+Se o limite for excedido:
+
+```json
+{
+  "error": "Too many requests"
+}
+```
+
+---
+
+# Parâmetros da URL
 
 <ParamField path="id" type="string" required>
-  O ID da transação (ex: `pay_abc123`)
+ID único do pagamento.
+
+Exemplo:
+
+```
+pay_abc123
+```
+
+Esse ID é retornado quando um pagamento é criado na API.
 </ParamField>
 
-### Resposta de Sucesso (200 OK)
+---
+
+# Segurança de Acesso
+
+A API verifica automaticamente se o pagamento pertence ao usuário autenticado.
+
+Se o pagamento não for do usuário que realizou a requisição, o acesso será bloqueado.
+
+Exemplo de resposta:
+
+```json
+{
+  "error": "Acesso negado",
+  "message": "Você não tem permissão para acessar este pagamento"
+}
+```
+
+---
+
+# Sincronização de Status
+
+Se o pagamento estiver com status:
+
+```
+PENDING
+ACTIVE
+```
+
+A API pode consultar o provedor de pagamento para verificar o estado atual da transação.
+
+No entanto, **este endpoint não altera o banco de dados**.
+
+A confirmação oficial do pagamento e o crédito de saldo são feitos exclusivamente pelo sistema interno de verificação automática da plataforma.
+
+Isso evita problemas como:
+
+- crédito duplicado
+- inconsistência de status
+- perda de saldo
+
+---
+
+# Status Possíveis
+
+| Status | Significado |
+|------|-------------|
+PENDING | pagamento aguardando confirmação |
+ACTIVE | QR Code ativo aguardando pagamento |
+COMPLETED | pagamento confirmado |
+
+---
+
+# Estrutura da Resposta
 
 <ResponseField name="success" type="boolean">
-  Indica se a operação foi bem-sucedida.
+Indica se a requisição foi processada com sucesso.
+</ResponseField>
+
+<ResponseField name="statusUpdated" type="boolean">
+Indica se houve tentativa de sincronização de status durante a consulta.
+
+Normalmente será `false`.
 </ResponseField>
 
 <ResponseField name="data" type="object">
-  <Expandable title="Propriedades do Objeto">
-    <ResponseField name="id" type="string">
-      ID único da transação.
-    </ResponseField>
-    <ResponseField name="status" type="string">
-      Status atual (`PENDING`, `COMPLETED`, `FAILED`).
-    </ResponseField>
-    <ResponseField name="value" type="number">
-      Valor total em centavos.
-    </ResponseField>
-    <ResponseField name="netValue" type="number">
-      Valor líquido em centavos.
-    </ResponseField>
-    <ResponseField name="updatedAt" type="string">
-      Data da última atualização.
-    </ResponseField>
-  </Expandable>
+
+<Expandable title="Campos retornados">
+
+<ResponseField name="id" type="string">
+ID único do pagamento.
 </ResponseField>
 
+<ResponseField name="transactionId" type="string">
+Identificador da transação.
+
+Pode ser o ID interno ou um correlation ID da transação.
+</ResponseField>
+
+<ResponseField name="value" type="number">
+Valor total da transação em centavos.
+</ResponseField>
+
+<ResponseField name="netValue" type="number">
+Valor líquido da transação.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+Status atual do pagamento.
+</ResponseField>
+
+<ResponseField name="qrCode" type="string">
+QR Code PIX gerado para pagamento.
+
+Pode ser utilizado diretamente em aplicativos bancários ou interfaces de pagamento.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+Descrição associada ao pagamento.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+Data de criação da transação.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+Data da última atualização da transação.
+</ResponseField>
+
+</Expandable>
+
+</ResponseField>
+
+---
+
+# Exemplo de Requisição
+
 <RequestExample>
-```bash cURL
-curl -X GET 'https://api.zynxwallet.com.br/api/v1/payment/get/pay_abc123' \
-  -H 'X-API-Key: zynx_sua_chave_aqui'
+
+```bash
+curl -X GET "https://api.zynxwallet.com.br/api/v1/payment/get/pay_abc123" \
+  -H "X-API-Key: zynx_sua_chave_aqui"
 ```
+
 </RequestExample>
 
+---
+
+# Exemplo de Resposta
+
 <ResponseExample>
-```json Resposta
+
+```json
 {
   "success": true,
+  "statusUpdated": false,
   "data": {
     "id": "pay_abc123",
-    "status": "COMPLETED",
-    "value": 15300,
+    "transactionId": "txn_94a83bd",
+    "value": 15000,
     "netValue": 15000,
-    "updatedAt": "2024-02-16T15:05:00Z"
+    "status": "PENDING",
+    "qrCode": "00020126360014br.gov.bcb.brcode...",
+    "description": "Compra produto premium",
+    "createdAt": "2024-02-16T15:00:00Z",
+    "updatedAt": "2024-02-16T15:00:00Z"
   }
 }
 ```
+
 </ResponseExample>
+
+---
+
+# Erros Possíveis
+
+## Pagamento não encontrado
+
+```json
+{
+  "error": "Pagamento não encontrado"
+}
+```
+
+---
+
+## Acesso negado
+
+```json
+{
+  "error": "Acesso negado",
+  "message": "Você não tem permissão para acessar este pagamento"
+}
+```
+
+---
+
+## Erro interno
+
+```json
+{
+  "error": "Erro interno do servidor",
+  "message": "Falha ao processar a requisição"
+}
+```
+
+---
+
+# Boas práticas
+
+- sempre armazene o **ID do pagamento** retornado ao criar uma transação  
+- utilize este endpoint para consultar o status da cobrança  
+- não confie apenas no frontend para verificar pagamentos  
+- implemente verificações periódicas no seu sistema
+
+---
+
+Este endpoint foi projetado para permitir **consultas seguras e rápidas de pagamentos** dentro da plataforma.
