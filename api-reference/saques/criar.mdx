@@ -1,6 +1,6 @@
 ---
 title: "Criar Saque PIX"
-api: "POST /api/v1/withdraw"
+api: "POST /api/v1/withdraw/create"
 description: "Solicita um saque do saldo da conta para uma chave PIX."
 ---
 
@@ -27,11 +27,9 @@ X-API-Key: zynx_sua_chave_aqui
 ---
 
 # Limite de saque
-
 | Regra | Valor |
 |------|------|
-Valor mínimo | R$1,00 |
-
+| Valor mínimo | R$5,00 |
 ---
 
 # Parâmetros
@@ -53,18 +51,19 @@ Chave PIX de destino.
 </ParamField>
 
 <ParamField body="pixKeyType" type="string" required>
-Tipo da chave PIX.
-
-Valores possíveis:
-
-```
-CPF
-EMAIL
-PHONE
-RANDOM
-COPYPASTE
-```
-</ParamField>
+	Tipo da chave PIX.
+	
+	Valores possíveis:
+	
+	```
+	CPF
+	CNPJ
+	EMAIL
+	PHONE
+	RANDOM
+	COPYPASTE
+	```
+	</ParamField>
 
 <ParamField body="description" type="string">
 Descrição opcional do saque.
@@ -83,7 +82,7 @@ Código de verificação enviado por e-mail (caso segurança esteja ativada).
 <RequestExample>
 
 ```bash
-curl -X POST "https://api.zynxwallet.com.br/api/v1/withdraw" \
+curl -X POST "https://api.zynxpay.lat/api/v1/withdraw/create" \
 -H "Content-Type: application/json" \
 -H "X-API-Key: zynx_sua_chave_aqui" \
 -d '{

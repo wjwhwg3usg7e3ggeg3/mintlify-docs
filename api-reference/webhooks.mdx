@@ -4,7 +4,12 @@ api: "POST (enviado automaticamente pela plataforma)"
 description: "Webhooks notificam seu sistema automaticamente quando eventos importantes acontecem."
 ---
 
-Webhooks permitem que seu sistema receba notificações **em tempo real** sempre que um evento ocorrer.
+<Note>
+  <div className="flex items-center gap-2">
+    <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">Hook</span>
+    <span>Webhooks permitem que seu sistema receba notificações **em tempo real** sempre que um evento ocorrer.</span>
+  </div>
+</Note>
 
 Em vez de ficar consultando a API repetidamente para verificar mudanças, seu servidor recebe automaticamente um **HTTP POST** quando algo acontece.
 
@@ -59,10 +64,10 @@ Cada webhook inclui headers de segurança.
 
 | Header | Descrição |
 |------|-----------|
-Content-Type | sempre `application/json` |
-User-Agent | identificador da API |
-X-Webhook-Timestamp | timestamp do envio |
-X-Webhook-Signature | assinatura HMAC do payload |
+| Content-Type | sempre `application/json` |
+| User-Agent | `Zynx-Wallet-API/1.0` |
+| X-Webhook-Timestamp | timestamp do envio (segundos) |
+| X-Webhook-Signature | assinatura HMAC-SHA256 do payload |
 
 Exemplo:
 
@@ -82,7 +87,7 @@ O corpo da requisição contém os dados do evento.
 ```json
 {
   "type": "payment",
-  "event": "payment.completed",
+  "event": "payment.approved",
   "data": {
     "id": "pay_abc123",
     "value": 15000,
@@ -97,25 +102,17 @@ O corpo da requisição contém os dados do evento.
 # Campos do Payload
 
 <ResponseField name="type" type="string">
-Tipo do evento.
-
-Exemplo:
-
-```
-payment
-```
+Tipo do evento (ex: `payment`, `withdraw`).
 </ResponseField>
 
 <ResponseField name="event" type="string">
 Nome completo do evento.
 
-Exemplo:
-
-```
-payment.completed
-payment.created
-payment.updated
-```
+Exemplos:
+- `payment.approved`
+- `payment.created`
+- `payment.failed`
+- `withdraw.completed`
 </ResponseField>
 
 <ResponseField name="data" type="object">
@@ -123,18 +120,8 @@ Dados específicos do evento.
 </ResponseField>
 
 <ResponseField name="timestamp" type="number">
-Timestamp do momento em que o webhook foi gerado.
+Timestamp do momento em que o webhook foi gerado (milissegundos).
 </ResponseField>
-
----
-
-# Eventos disponíveis
-
-| Evento | Descrição |
-|------|-----------|
-payment.created | pagamento criado |
-payment.completed | pagamento confirmado |
-payment.updated | atualização de status |
 
 ---
 
@@ -152,79 +139,17 @@ Usando sua **API Key** como chave secreta.
 
 ---
 
-# Exemplo de geração de assinatura
-
-A assinatura é criada a partir do payload JSON.
-
-Processo:
-
-```
-1 converter payload para JSON string
-2 gerar HMAC SHA256 usando API Key
-3 retornar assinatura em formato hex
-```
-
-Exemplo de resultado:
-
-```
-sha256=8c3fa21d7c1baf0a8f0c...
-```
-
----
-
 # Validação da assinatura
 
 Seu servidor deve verificar se o webhook realmente veio da plataforma.
 
 Processo:
 
-1. receber payload
+1. receber payload bruto (raw body)
 2. gerar assinatura local usando sua API Key
-3. comparar com o header `X-Webhook-Signature`
+3. comparar com o header `X-Webhook-Signature` (incluindo o prefixo `sha256=`)
 
 Se forem iguais, o webhook é válido.
-
----
-
-# Exemplo de requisição recebida
-
-<RequestExample>
-
-```http
-POST /webhook HTTP/1.1
-Host: seusite.com
-Content-Type: application/json
-User-Agent: Zynx-Wallet-API/1.0
-X-Webhook-Timestamp: 1710000000
-X-Webhook-Signature: sha256=3c4b0a9c...
-
-{
-  "type": "payment",
-  "event": "payment.completed",
-  "data": {
-    "id": "pay_abc123",
-    "value": 15000,
-    "status": "COMPLETED"
-  },
-  "timestamp": 1710000000000
-}
-```
-
-</RequestExample>
-
----
-
-# Resposta esperada
-
-Seu servidor deve responder com **status HTTP 2xx** para confirmar que recebeu o webhook.
-
-Exemplo:
-
-```http
-HTTP/1.1 200 OK
-```
-
-Se seu servidor retornar erro, o webhook poderá ser reenviado.
 
 ---
 
@@ -235,17 +160,7 @@ Se o webhook falhar, a plataforma tentará enviar novamente.
 Estratégia:
 
 - máximo de **5 tentativas**
-- **backoff exponencial**
-
-Exemplo de delays:
-
-| Tentativa | Delay |
-|------|------|
-1 | 2 segundos |
-2 | 4 segundos |
-3 | 8 segundos |
-4 | 16 segundos |
-5 | 32 segundos |
+- **backoff exponencial** (2s, 4s, 8s, 16s, 32s)
 
 Se todas falharem, o webhook será marcado como **failed**.
 
@@ -260,41 +175,3 @@ Cada webhook possui limite de resposta:
 ```
 
 Se o servidor não responder dentro desse tempo, será considerado falha.
-
----
-
-# Boas práticas
-
-- sempre responder rapidamente ao webhook  
-- validar a assinatura HMAC  
-- processar eventos de forma idempotente  
-- armazenar IDs de eventos para evitar duplicações  
-- retornar status `200` após processar com sucesso  
-
----
-
-# Fluxo recomendado
-
-Fluxo ideal de processamento:
-
-```
-1 receber webhook
-2 validar assinatura
-3 verificar evento
-4 processar dados
-5 responder HTTP 200
-```
-
----
-
-# Exemplo de resposta do servidor
-
-```json
-{
-  "received": true
-}
-```
-
----
-
-Webhooks permitem integrar seu sistema com a plataforma de forma **automática, segura e em tempo real**.

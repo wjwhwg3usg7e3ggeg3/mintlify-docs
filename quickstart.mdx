@@ -1,12 +1,12 @@
 ---
 title: "Início Rápido"
 icon: "bolt"
-description: "Aprenda a configurar sua integração com a Zynx Wallet em menos de 5 minutos."
+description: "Aprenda a configurar sua integração com a ZynX PAY em menos de 5 minutos."
 ---
 
 ## Conceitos Fundamentais
 
-Antes de começar a codar, é importante entender como a Zynx Wallet processa suas transações. Nossa API trabalha com o conceito de **Saldo em Centavos** para evitar erros de arredondamento matemático.
+Antes de começar a codar, é importante entender como a ZynX PAY processa suas transações. Nossa API trabalha com o conceito de **Saldo em Centavos** para evitar erros de arredondamento matemático.
 
 <CardGroup cols={2}>
   <Card title="Valores em Centavos" icon="coins">
@@ -34,7 +34,7 @@ graph TD
 
 ## 1. Obtenha sua Chave de API
 
-Acesse o seu [Dashboard](https://zynxwallet.com.br/dashboard/credentials) e gere sua chave secreta.
+Acesse o seu [Dashboard](https://zynxpay.lat/dashboard/credentials) e gere sua chave secreta.
 
 <Note>
   Todas as chaves de API da Zynx começam com o prefixo `zynx_`. Nunca compartilhe sua chave secreta ou a exponha no frontend.
@@ -45,7 +45,7 @@ Acesse o seu [Dashboard](https://zynxwallet.com.br/dashboard/credentials) e gere
 Todas as requisições devem ser feitas para a URL base abaixo:
 
 ```text
-https://api.zynxwallet.com.br/api/v1
+https://api.zynxpay.lat/api/v1
 ```
 
 ## 3. Autenticação
@@ -62,7 +62,7 @@ Tente criar um pagamento de teste usando o comando `curl` abaixo. Este comando g
 
 ```bash
 curl --request POST \
-  --url https://api.zynxwallet.com.br/api/v1/payment/create \
+  --url https://api.zynxpay.lat/api/v1/payment/create \
   --header 'Content-Type: application/json' \
   --header 'X-API-Key: zynx_sua_chave' \
   --data '{

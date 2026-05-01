@@ -36,7 +36,7 @@ Sem autenticação válida, a API retornará:
 | Tipo | Valor |
 |-----|------|
 Valor mínimo | **R$ 1,00**
-Valor máximo | **R$ 1.000,00**
+Valor máximo | **R$ 100.000,00**
 Moeda | Real Brasileiro (BRL)
 
 Todos os valores são armazenados internamente **em centavos** para evitar erros de arredondamento.
@@ -75,7 +75,7 @@ Exemplo:
 150.99
 ```
 
-O valor mínimo permitido é **R$ 1,00** e o máximo **R$ 1.000,00**.
+O valor mínimo permitido é **R$ 1,00** e o máximo **R$ 100.000,00**.
 </ParamField>
 
 <ParamField body="description" type="string">
@@ -246,7 +246,7 @@ Data de criação da transação no formato ISO 8601.
 <RequestExample>
 
 ```bash cURL
-curl -X POST 'https://api.zynxwallet.com.br/api/v1/payment/create' \
+curl -X POST 'https://api.zynxpay.lat/api/v1/payment/create' \
   -H 'X-API-Key: zynx_sua_chave_aqui' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -313,7 +313,7 @@ curl -X POST 'https://api.zynxwallet.com.br/api/v1/payment/create' \
 ```json
 {
   "error": "Valor muito alto",
-  "message": "O valor máximo por pagamento é R$ 1000.00"
+  "message": "O valor máximo por pagamento é R$ 100000.00"
 }
 ```
 
