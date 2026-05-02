@@ -1,0 +1,1658 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ZynX PAY API",
+    "description": "API para processamento de pagamentos PIX, saques e gestão de saldo.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.zynxpay.lat/api/v1",
+      "description": "Servidor de Produção"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Chave de API fornecida pela ZynX PAY"
+      }
+    },
+    "schemas": {
+      "PaymentCreateRequest": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "number",
+            "description": "Valor da transação em reais. Mínimo R$ 1,00 e máximo R$ 1,000",
+            "minimum": 1,
+            "maximum": 100000,
+            "example": 150.00
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição do pagamento. Máximo 255 caracteres.",
+            "maxLength": 255,
+            "example": "Venda de Produto #123"
+          },
+          "coverFee": {
+            "type": "boolean",
+            "description": "Define quem paga a taxa da plataforma. `true` → o cliente paga a taxa; `false` → a taxa é descontada do valor recebido.",
+            "default": false,
+            "example": true
+          },
+          "splitUser": {
+            "type": "string",
+            "format": "email",
+            "description": "Email de outro usuário da plataforma que receberá automaticamente uma parte do pagamento.",
+            "example": "parceiro@zynx.com"
+          },
+          "splitTax": {
+            "type": "number",
+            "description": "Porcentagem do valor enviada para o usuário definido em `splitUser`. Intervalo permitido: 0.01 a 100.",
+            "minimum": 0.01,
+            "maximum": 100,
+            "example": 10.0
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
+      "PaymentCreateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a transação foi criada com sucesso."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "ID único da transação na plataforma.",
+                "example": "pay_abc123"
+              },
+              "transactionId": {
+                "type": "string",
+                "description": "ID da transação gerado pela gateway de pagamento.",
+                "example": "mistic_xyz789"
+              },
+              "value": {
+                "type": "number",
+                "description": "Valor total da transação em centavos.",
+                "example": 15300
+              },
+              "valueInReais": {
+                "type": "number",
+                "description": "Valor exato que o cliente deve pagar no banco.",
+                "example": 153.00
+              },
+              "netValue": {
+                "type": "number",
+                "description": "Valor líquido que entrará no seu saldo em centavos.",
+                "example": 15000
+              },
+              "fee": {
+                "type": "number",
+                "description": "Valor da taxa aplicada em centavos.",
+                "example": 300
+              },
+              "status": {
+                "type": "string",
+                "description": "Status atual da transação.",
+                "enum": ["PENDING", "COMPLETED"]
+              },
+              "qrcodeUrl": {
+                "type": "string",
+                "description": "Imagem do QR Code em Base64."
+              },
+              "copyPaste": {
+                "type": "string",
+                "description": "Código PIX Copia e Cola."
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data de criação da transação no formato ISO 8601."
+              }
+            }
+          }
+        }
+      },
+      "PaymentGetResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a requisição foi processada com sucesso."
+          },
+          "statusUpdated": {
+            "type": "boolean",
+            "description": "Indica se houve tentativa de sincronização de status durante a consulta."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "ID único do pagamento."
+              },
+              "transactionId": {
+                "type": "string",
+                "description": "Identificador da transação."
+              },
+              "value": {
+                "type": "number",
+                "description": "Valor total da transação em centavos."
+              },
+              "netValue": {
+                "type": "number",
+                "description": "Valor líquido da transação."
+              },
+              "status": {
+                "type": "string",
+                "description": "Status atual do pagamento.",
+                "enum": ["PENDING", "ACTIVE", "COMPLETED"]
+              },
+              "qrCode": {
+                "type": "string",
+                "description": "QR Code PIX gerado para pagamento."
+              },
+              "description": {
+                "type": "string",
+                "description": "Descrição associada ao pagamento."
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data de criação da transação."
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data da última atualização da transação."
+              }
+            }
+          }
+        }
+      },
+      "PaymentListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID único do pagamento."
+          },
+          "correlationID": {
+            "type": "string",
+            "description": "Identificador da transação utilizado internamente."
+          },
+          "value": {
+            "type": "number",
+            "description": "Valor total da transação em centavos."
+          },
+          "netValue": {
+            "type": "number",
+            "description": "Valor líquido da transação."
+          },
+          "fee": {
+            "type": "number",
+            "description": "Taxa aplicada na transação."
+          },
+          "status": {
+            "type": "string",
+            "description": "Status atual do pagamento.",
+            "enum": ["PENDING", "ACTIVE", "COMPLETED"]
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição do pagamento."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data de criação da transação."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data da última atualização da transação."
+          }
+        }
+      },
+      "PaginationInfo": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Quantidade total de pagamentos encontrados."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Quantidade máxima retornada por requisição."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Posição inicial da consulta."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Indica se existem mais resultados disponíveis."
+          }
+        }
+      },
+      "PaymentStatistics": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Quantidade total de pagamentos."
+          },
+          "completed": {
+            "type": "number",
+            "description": "Quantidade de pagamentos concluídos."
+          },
+          "pending": {
+            "type": "number",
+            "description": "Quantidade de pagamentos pendentes."
+          },
+          "totalValue": {
+            "type": "number",
+            "description": "Soma de todos os valores de pagamentos."
+          },
+          "totalNetValue": {
+            "type": "number",
+            "description": "Soma de todos os valores líquidos recebidos."
+          }
+        }
+      },
+      "PaymentListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a requisição foi processada com sucesso."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "payments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PaymentListItem"
+                },
+                "description": "Lista de pagamentos do usuário."
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/PaginationInfo",
+                "description": "Informações de paginação."
+              },
+              "statistics": {
+                "$ref": "#/components/schemas/PaymentStatistics",
+                "description": "Resumo estatístico das transações."
+              }
+            }
+          }
+        }
+      },
+      "WithdrawCreateRequest": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Valor do saque em reais.",
+            "example": 50.00,
+            "minimum": 5.00
+          },
+          "pixKey": {
+            "type": "string",
+            "description": "Chave PIX de destino."
+          },
+          "pixKeyType": {
+            "type": "string",
+            "description": "Tipo da chave PIX.",
+            "enum": ["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM", "COPYPASTE"]
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição opcional do saque. Máximo de 100 caracteres.",
+            "maxLength": 100
+          },
+          "verificationCode": {
+            "type": "string",
+            "description": "Código de verificação enviado por e-mail (caso segurança esteja ativada)."
+          }
+        },
+        "required": [
+          "amount",
+          "pixKey",
+          "pixKeyType"
+        ]
+      },
+      "WithdrawCreateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Saque solicitado com sucesso e está sendo processado."
+          },
+          "withdrawId": {
+            "type": "string",
+            "example": "wd_abc123"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "PROCESSING", "FAILED"],
+            "example": "PROCESSING"
+          }
+        }
+      },
+      "WithdrawCryptoRequest": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Valor do saque em reais. Mínimo R$20 e máximo R$3000.",
+            "minimum": 20,
+            "maximum": 3000,
+            "example": 100
+          },
+          "wallet": {
+            "type": "string",
+            "description": "Endereço da carteira USDT na rede BEP20.",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "example": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição opcional do saque. Máximo de 100 caracteres.",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "amount",
+          "wallet"
+        ]
+      },
+      "WithdrawCryptoResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Saque crypto adicionado à fila de processamento"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "ID único do saque.",
+                "example": "wd_abc123"
+              },
+              "type": {
+                "type": "string",
+                "example": "CRYPTO_BEP20"
+              },
+              "currency": {
+                "type": "string",
+                "example": "USDT"
+              }              "network": {
+                "type": "string",
+                "example": "BEP20"
+              },
+              "value": {
+                "type": "number",
+                "description": "Valor total do saque em centavos.",
+                "example": 10000
+              },
+              "valueInReais": {
+                "type": "number",
+                "description": "Valor total do saque em reais.",
+                "example": 100
+              },
+              "fee": {
+                "type": "number",
+                "description": "Taxa aplicada em centavos.",
+                "example": 800
+              },
+              "feeInReais": {
+                "type": "number",
+                "description": "Taxa aplicada em reais.",
+                "example": 8
+              },
+              "wallet": {
+                "type": "string",
+                "description": "Endereço da carteira USDT na rede BEP20.",
+                "example": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["QUEUED", "PROCESSING", "COMPLETED", "FAILED"],
+                "example": "QUEUED"
+              },
+              "jobId": {
+                "type": "string",
+                "description": "ID do job de processamento.",
+                "example": "job_123456"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data de criação do saque.",
+                "example": "2026-03-12T19:00:00Z"
+              }
+            }
+          }
+        }
+      },
+      "WithdrawGetResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a requisição foi processada com sucesso."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "ID único do saque."
+              },
+              "correlationID": {
+                "type": "string",
+                "description": "ID de correlação utilizado internamente para rastreamento."
+              },
+              "value": {
+                "type": "number",
+                "description": "Valor solicitado para saque."
+              },
+              "status": {
+                "type": "string",
+                "description": "Status atual do saque.",
+                "enum": ["PENDING", "PROCESSING", "COMPLETED", "FAILED"]
+              },
+              "pixKey": {
+                "type": "string",
+                "description": "Chave PIX utilizada no saque (quando aplicável)."
+              },
+              "pixKeyType": {
+                "type": "string",
+                "description": "Tipo da chave PIX utilizada."
+              },
+              "transactionId": {
+                "type": "string",
+                "description": "ID da transação retornado pela gateway de pagamento."
+              },
+              "fee": {
+                "type": "number",
+                "description": "Taxa aplicada ao saque."
+              },
+              "sent": {
+                "type": "number",
+                "description": "Valor efetivamente enviado após desconto da taxa."
+              },
+              "completedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data em que o saque foi concluído."
+              },
+              "failedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data em que o saque falhou."
+              },
+              "failureReason": {
+                "type": "string",
+                "description": "Motivo da falha caso o saque tenha sido rejeitado."
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Data de criação do saque."
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Última atualização do saque."
+              }
+            }
+          }
+        }
+      },
+      "WithdrawListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID único do saque."
+          },
+          "correlationID": {
+            "type": "string",
+            "description": "ID de correlação do saque."
+          },
+          "value": {
+            "type": "number",
+            "description": "Valor solicitado para saque."
+          },
+          "status": {
+            "type": "string",
+            "description": "Status atual do saque.",
+            "enum": ["PENDING", "PROCESSING", "WAITING", "COMPLETED", "FAILED"]
+          },
+          "pixKey": {
+            "type": "string",
+            "description": "Chave utilizada no saque."
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição do saque."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Informações adicionais do saque."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data de criação do saque."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Última atualização do saque."
+          }
+        }
+      },
+      "WithdrawPaginationInfo": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Quantidade total de saques."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Quantidade de registros retornados."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Posição atual da paginação."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Indica se existem mais registros disponíveis."
+          }
+        }
+      },
+      "WithdrawStatistics": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total de saques registrados."
+          },
+          "completed": {
+            "type": "number",
+            "description": "Quantidade de saques concluídos."
+          },
+          "pending": {
+            "type": "number",
+            "description": "Quantidade de saques em processamento."
+          },
+          "failed": {
+            "type": "number",
+            "description": "Quantidade de saques que falharam."
+          },
+          "totalValue": {
+            "type": "number",
+            "description": "Valor total solicitado em saques."
+          }
+        }
+      },
+      "WithdrawListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a requisição foi processada com sucesso."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "withdraws": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/WithdrawListItem"
+                },
+                "description": "Lista de saques retornados."
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/WithdrawPaginationInfo",
+                "description": "Informações de paginação."
+              },
+              "statistics": {
+                "$ref": "#/components/schemas/WithdrawStatistics",
+                "description": "Estatísticas gerais dos saques."
+              }
+            }
+          }
+        }
+      },
+      "UserBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a requisição foi processada com sucesso."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "balance": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number",
+                    "description": "Saldo atual da conta em centavos."
+                  },
+                  "pendingPayments": {
+                    "type": "number",
+                    "description": "Valor total de pagamentos pendentes."
+                  },
+                  "totalWithPending": {
+                    "type": "number",
+                    "description": "Saldo total incluindo pagamentos pendentes."
+                  },
+                  "isNegative": {
+                    "type": "boolean",
+                    "description": "Indica se o saldo da conta está negativo."
+                  }
+                }
+              },
+              "disputes": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number",
+                    "description": "Total de disputas registradas."
+                  },
+                  "pending": {
+                    "type": "number",
+                    "description": "Quantidade de disputas em andamento."
+                  },
+                  "totalDisputedAmount": {
+                    "type": "number",
+                    "description": "Valor total em disputa."
+                  },
+                  "totalBlockedAmount": {
+                    "type": "number",
+                    "description": "Valor total bloqueado devido a disputas."
+                  }
+                }
+              },
+              "statistics": {
+                "type": "object",
+                "properties": {
+                  "totalReceived": {
+                    "type": "number",
+                    "description": "Valor total recebido em pagamentos concluídos."
+                  },
+                  "totalFees": {
+                    "type": "number",
+                    "description": "Total de taxas cobradas nas transações."
+                  },
+                  "completedPayments": {
+                    "type": "number",
+                    "description": "Quantidade de pagamentos concluídos."
+                  },
+                  "pendingPayments": {
+                    "type": "number",
+                    "description": "Quantidade de pagamentos pendentes."
+                  },
+                  "totalPayments": {
+                    "type": "number",
+                    "description": "Total geral de pagamentos registrados."
+                  }
+                }
+              },
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "daily": {
+                    "type": "number",
+                    "description": "Limite diário de transações."
+                  },
+                  "dailyUsed": {
+                    "type": "number",
+                    "description": "Valor já utilizado do limite diário."
+                  },
+                  "dailyRemaining": {
+                    "type": "number",
+                    "description": "Valor restante disponível para uso no dia."
+                  },
+                  "monthly": {
+                    "type": "number",
+                    "description": "Limite mensal de transações."
+                  },
+                  "monthlyUsed": {
+                    "type": "number",
+                    "description": "Valor já utilizado do limite mensal."
+                  },
+                  "monthlyRemaining": {
+                    "type": "number",
+                    "description": "Valor restante disponível no mês."
+                  },
+                  "perTransaction": {
+                    "type": "number",
+                    "description": "Valor máximo permitido por transação."
+                  }
+                }
+              },
+              "plan": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Nome do plano da conta."
+                  },
+                  "transactionFee": {
+                    "type": "number",
+                    "description": "Taxa fixa aplicada por transação em centavos."
+                  },
+                  "transactionFeeInReais": {
+                    "type": "string",
+                    "description": "Taxa exibida em reais."
+                  },
+                  "transactionFeePercent": {
+                    "type": "number",
+                    "description": "Percentual de taxa aplicado nas transações."
+                  },
+                  "transactionFeeFixed": {
+                    "type": "number",
+                    "description": "Valor fixo da taxa em centavos."
+                  },
+                  "isPercentage": {
+                    "type": "boolean",
+                    "description": "Indica se a taxa é percentual ou fixa."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PaymentSendRequest": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Valor do envio em reais."
+          },
+          "pixKey": {
+            "type": "string",
+            "description": "Chave PIX de destino."
+          },
+          "pixKeyType": {
+            "type": "string",
+            "description": "Tipo da chave PIX.",
+            "enum": ["CPF", "EMAIL", "PHONE", "RANDOM", "CNPJ"]
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição opcional da transação. Máximo de 100 caracteres.",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "amount",
+          "pixKey",
+          "pixKeyType"
+        ]
+      },
+      "PaymentSendResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indica se a requisição foi processada com sucesso."
+          },
+          "message": {
+            "type": "string",
+            "example": "Envio processado com sucesso"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "number",
+                "description": "Valor total debitado da conta em centavos."
+              },
+              "fee": {
+                "type": "number",
+                "description": "Taxa cobrada pela transação."
+              },
+              "sent": {
+                "type": "number",
+                "description": "Valor efetivamente enviado após desconto da taxa.""
+              },
+              "destination": {
+                "type": "string",
+                "description": "Chave PIX de destino."
+              },
+              "mistic": {
+                "type": "object",
+                "description": "Resposta retornada pela gateway de pagamento.",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "example": "success"
+                  },
+                  "transactionId": {
+                    "type": "string",
+                    "example": "tx_91283"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "InsufficientBalanceError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "SALDO_INSUFICIENTE"
+          },
+          "message": {
+            "type": "string",
+            "example": "Você não possui saldo suficiente para realizar este saque."
+          }
+        }
+      },
+      "InvalidPixKeyError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "PIX_INVALIDA"
+          },
+          "message": {
+            "type": "string",
+            "example": "A chave PIX fornecida não segue o formato esperado."
+          }
+        }
+      },
+      "AmountBelowMinimumError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "VALOR_ABAIXO_MINIMO"
+          },
+          "message": {
+            "type": "string",
+            "example": "O valor mínimo é R$ 1,00."
+          }
+        }
+      },
+      "PaymentSendErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "InvalidWalletError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Wallet inválida"
+          },
+          "message": {
+            "type": "string",
+            "example": "O endereço da wallet deve estar no formato BEP20 (0x seguido de 40 caracteres hexadecimais)"
+          }
+        }
+      },
+      "AmountTooLowError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Valor abaixo do mínimo"
+          },
+          "message": {
+            "type": "string",
+            "example": "O valor mínimo para saque crypto é R$ 20.00"
+          }
+        }
+      },
+      "AmountTooHighError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Valor acima do máximo"
+          },
+          "message": {
+            "type": "string",
+            "example": "O valor máximo para saque crypto é R$ 3000.00"
+          }
+        }
+      },
+      "WithdrawInProgressError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Saque em processamento"
+          },
+          "message": {
+            "type": "string",
+            "example": "Você já possui um saque em processamento. Aguarde a conclusão antes de solicitar um novo."
+          }
+        }
+      },
+      "WithdrawNotFoundError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Saque não encontrado"
+          }
+        }
+      },
+      "AccessDeniedError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Acesso negado"
+          },
+          "message": {
+            "type": "string",
+            "example": "Você não tem permissão para acessar este saque"
+          }
+        }
+      },
+      "InternalServerError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Erro interno do servidor"
+          },
+          "message": {
+            "type": "string",
+            "example": "Falha ao processar a requisição"
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Unauthorized"
+          }
+        }
+      },
+      "TooManyRequestsError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Too many requests"
+          }
+        }
+      },
+      "InvalidValueError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Valor inválido"
+          },
+          "message": {
+            "type": "string",
+            "example": "Envie um valor maior que zero"
+          }
+        }
+      },
+      "ValueTooLowError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Valor muito baixo"
+          },
+          "message": {
+            "type": "string",
+            "example": "O valor mínimo é R$ 1.00"
+          }
+        }
+      },
+      "ValueTooHighError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Valor muito alto"
+          },
+          "message": {
+            "type": "string",
+            "example": "O valor máximo por pagamento é R$ 100000.00"
+          }
+        }
+      },
+      "InvalidSplitError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Split inválido"
+          },
+          "message": {
+            "type": "string",
+            "example": "Você não pode fazer split para sua própria conta"
+          }
+        }
+      },
+      "SplitUserNotFoundError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Usuário de split não encontrado"
+          },
+          "message": {
+            "type": "string",
+            "example": "Não foi encontrada uma conta ativa com este email"
+          }
+        }
+      },
+      "PaymentNotFoundError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Pagamento não encontrado"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
+  "paths": {
+    "/payment/create": {
+      "post": {
+        "summary": "Criar Pagamento PIX",
+        "description": "Cria uma nova transação PIX e retorna o QR Code e o código Copia e Cola para pagamento.",
+        "tags": ["Pagamentos"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pagamento criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentCreateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Muitas requisições",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro na requisição",
+            "content": {
+              "application/json": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/InvalidValueError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ValueTooLowError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ValueTooHighError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InvalidSplitError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SplitUserNotFoundError"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment/get/{id}": {
+      "get": {
+        "summary": "Consultar Pagamento",
+        "description": "Consulta os detalhes de um pagamento específico.",
+        "tags": ["Pagamentos"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "pay_abc123"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do pagamento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentGetResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pagamento não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentNotFoundError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acesso negado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessDeniedError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment/list": {
+      "get": {
+        "summary": "Listar Pagamentos",
+        "description": "Retorna a lista de todos os pagamentos do usuário autenticado.",
+        "tags": ["Pagamentos"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtra pagamentos por status. Valores aceitos: PENDING, ACTIVE, COMPLETED, PAID.",
+            "schema": {
+              "type": "string",
+              "enum": ["PENDING", "ACTIVE", "COMPLETED", "PAID"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Define quantos pagamentos serão retornados por requisição.",
+            "schema": {
+              "type": "number",
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Define o ponto inicial da paginação.",
+            "schema": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de pagamentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/withdraw/create": {
+      "post": {
+        "summary": "Criar Saque PIX",
+        "description": "Solicita um saque do saldo da conta para uma chave PIX.",
+        "tags": ["Saques"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saque solicitado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawCreateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/withdraw/crypto": {
+      "post": {
+        "summary": "Criar Saque Crypto",
+        "description": "Solicita um saque em USDT pela rede BEP20.",
+        "tags": ["Saques"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawCryptoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saque crypto solicitado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawCryptoResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro na requisição",
+            "content": {
+              "application/json": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/InvalidWalletError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AmountTooLowError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AmountTooHighError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/WithdrawInProgressError"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/withdraw/{id}": {
+      "get": {
+        "summary": "Consultar Saque",
+        "description": "Busca informações de um saque específico pertencente ao usuário autenticado.",
+        "tags": ["Saques"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "wd_abc123"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalhes do saque",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawGetResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Saque não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawNotFoundError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Acesso negado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessDeniedError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/withdraw": {
+      "get": {
+        "summary": "Listar Saques",
+        "description": "Lista todos os saques pertencentes ao usuário autenticado.",
+        "tags": ["Saques"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtra os saques por status. Valores possíveis: PENDING, PROCESSING, WAITING, COMPLETED, FAILED.",
+            "schema": {
+              "type": "string",
+              "enum": ["PENDING", "PROCESSING", "WAITING", "COMPLETED", "FAILED"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Quantidade de resultados retornados.",
+            "schema": {
+              "type": "number",
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Deslocamento da paginação. Usado para navegar entre páginas de resultados.",
+            "schema": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de saques",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/balance": {
+      "get": {
+        "summary": "Consultar Saldo do Usuário",
+        "description": "Retorna o saldo atual, estatísticas de pagamentos e limites da conta.",
+        "tags": ["Conta"],
+        "responses": {
+          "200": {
+            "description": "Saldo do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserBalanceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payment/send": {
+      "post": {
+        "summary": "Enviar Pagamento",
+        "description": "Realiza o envio de um pagamento (transferência entre contas).",
+        "tags": ["Conta"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentSendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pagamento enviado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSendResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro na requisição",
+            "content": {
+              "application/json": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/PaymentSendErrorResponse"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InsufficientBalanceError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InvalidPixKeyError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AmountBelowMinimumError"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
